@@ -1,0 +1,13 @@
+{
+  "name": "container_reader",
+  "version": "2.0.0",
+  "title": "Read the content of a container",
+  "author": "Telkine2018",
+  "contact": "",
+  "homepage": "",
+  "description": "A combinator to read the content of chest",
+  "factorio_version": "2.0",
+  "dependencies": [
+		"base >= 2.0.0" 
+	]
+}
