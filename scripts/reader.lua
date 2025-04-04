@@ -50,6 +50,23 @@ local function clear(reader)
     end
 end
 
+
+---@type {[string]:defines.inventory | integer}
+local entities_inventory = {
+    ["agricultural-tower"] = 3 
+    ,["linked-container"] = defines.inventory.chest
+    ,["logistic-container"] = defines.inventory.chest
+    ,["container"] = defines.inventory.chest
+    ,["infinity-container"] = defines.inventory.chest
+    ,["cargo-landing-pad"] = defines.inventory.cargo_landing_pad_main
+    ,["space-platform-hub"] = defines.inventory.hub_main
+}
+
+local entities_to_scan = {}
+for name in pairs(entities_inventory) do
+    table.insert(entities_to_scan, name)
+end
+
 ---@param reader LuaEntity
 local function process_reader(reader)
     local chest = storage.reader_chest[reader.unit_number] --[[@as LuaEntity?]]
@@ -90,31 +107,31 @@ local function process_reader(reader)
         local entities = reader.surface.find_entities_filtered {
             position = pos,
             radius = 0.25,
-            type = { "linked-container", "logistic-container", "container" }
+            type = entities_to_scan
         }
         local found
         if #entities == 0 then
             entities = reader.surface.find_entities_filtered {
                 position = { x = x, y = y },
                 radius = 5,
-                type = { "linked-container", "logistic-container", "container", "infinity-container" }
+                type = entities_to_scan
             }
             if #entities == 0 then
                 clear(reader)
                 return
             end
-            for _, chest in pairs(entities) do
-                local chest_pos = chest.position
-                local tile_width = chest.tile_width
-                local tile_height = chest.tile_height
+            for _, container in pairs(entities) do
+                local container_pos = container.position
+                local tile_width = container.tile_width
+                local tile_height = container.tile_height
                 local w, h
                 if direction == defines.direction.north or direction == defines.direction.south then
                     w, h = tile_width, tile_height
                 else
                     h, w = tile_width, tile_height
                 end
-                if (math.abs(chest_pos.x - x) <= w / 2) and (math.abs(chest_pos.y - y) <= h / 2) then
-                    found = chest
+                if (math.abs(container_pos.x - x) <= w / 2) and (math.abs(container_pos.y - y) <= h / 2) then
+                    found = container
                     break
                 end
             end
@@ -129,7 +146,9 @@ local function process_reader(reader)
         storage.reader_chest[reader.unit_number] = chest
     end
 
-    local inv = chest.get_inventory(defines.inventory.chest)
+    local inv
+    inv = chest.get_inventory(entities_inventory[chest.type])
+
     if not inv then
         clear(reader)
         return
@@ -143,7 +162,7 @@ local function process_reader(reader)
 
     for _, item in pairs(content) do
         table.insert(filters, {
-            value = { type = "item", name = item.name, quality = "normal", comparator = "=" },
+            value = { type = "item", name = item.name, quality = item.quality, comparator = "=" },
             min = item.count
         })
     end
@@ -187,6 +206,8 @@ script.on_event(defines.events.on_built_entity, on_built, entity_filter)
 script.on_event(defines.events.on_robot_built_entity, on_built, entity_filter)
 script.on_event(defines.events.script_raised_built, on_built, entity_filter)
 script.on_event(defines.events.script_raised_revive, on_built, entity_filter)
+script.on_event(defines.events.on_space_platform_built_entity, on_built, entity_filter)
+
 script.on_event(defines.events.on_tick, on_tick)
 
 local function on_init()
